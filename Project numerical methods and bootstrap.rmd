@@ -1,0 +1,1155 @@
+---
+title: "Project LSTAT2185"
+author: "Mathieu Graf and Victor Dujardin"
+output: pdf_document
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, echo = TRUE)
+```
+
+
+
+\section{Exercise 1.}
+
+Let $f : \mathbb{R} \longrightarrow \mathbb{R}$ be the function $f(x) = \frac{exp(x)}{ 1 + exp(x)}$
+
+In order to derive the third order Taylor expansion, we need the three firsts derivatives of $f(x)$.
+
+$$f'(x) = \frac{e^x} { (1 + e^x)^2}$$
+
+
+$$f''(x) =  \frac{e^x(1-e^x)}{(1+e^x)^3}$$
+$$f^{(3)}(x) = \frac{(e^{2x} - 4 e^x +1)e^x} { (1 + e^x)^4}$$
+Using the formula :
+$$f(x) \approx T(x) = \sum_{k=0}^K \frac{f^{(k)}(x_0)}{k!}(x -x_0)^k$$
+
+The Taylor expansion of $f$ around the point $x = 0$ is $$ T(x) = \frac{e^0} { 1 + e^0} + \frac{e^0} { (1 + e^0)^2}(x-0) -\frac{(e^0 - 1)e^0} { (1 + e^0)^3}\frac{(x-0)^2} {2!} + \frac{(e^{20} - 4 e^0 +1)e^0} { (1 + e^0)^4}\frac{(x-0)^3} {3!}$$
+
+
+
+
+
+
+
+$$ = \frac{1} { 2} + \frac{1} { 4}x - \frac{1} { 48}x^3 $$
+
+
+
+
+```{r, echo=FALSE}
+f = function(x){
+  return(exp(x) / (1 + exp(x)))
+}
+
+df1 = function(x){
+  return(exp(x)/(1 + exp(x))^2 )
+}
+
+df2 = function(x){
+  return(-(exp(x)*(exp(x) - 1))/(1 + exp(x))^3)
+}
+
+
+df3 = function(x){
+  return((exp(x)*(-4*exp(x) + exp(2*x) + 1))/(exp(x) + 1)^4)
+}
+
+taylor_exp = function(x){
+  return((0.5) * 1 + (0.25) * x + (-1/48) * x^3)
+}
+
+
+```
+\newpage
+Here we can see the Taylor expansion in red which approximate the real function f.
+
+```{r, echo=FALSE, fig.height = 5, fig.width = 25/3}
+t = seq(-5,5,0.01)
+plot(t,taylor_exp(t), type = 'l', col = 'red', lwd = 2, main = 'Taylor Expansion', ylab = '')
+lines(t, f(t), col = 'black', lwd = 2 )
+legend("topright", col = c('red', 'black'), lty = c(1,1), lwd = c(2,2),
+       cex = 0.5, legend = c("Taylor expansion in 0","Function F(x)"))
+
+
+```
+We want to find the maximum of this function by implementing a Newton algorithm where $\theta_{t+1} = \theta_t - \frac{f'(x)}{f''(x)}$.
+
+```{r, echo=FALSE, fig.height = 5, fig.width = 25/3}
+Newton_method = function(x){
+  j = 0
+  i0 = x
+  i = 0
+  result = c(i0)
+  time = c(0)
+  while(j != 1){
+    i = i + 1
+    i1 = i0 - df2(i0)/df3(i0)*0.1
+    result = c(result,i1)
+    time = c(time,i)
+    if(i1 == i0){
+      j = 1
+    }
+    else {
+      j = 0
+      i0 = i1
+    }
+  }
+  data.frame(time,result)
+  plot(time, result, type = 'l', ylim = c(-0.2,1),
+       col = 'red', lwd = 2, main = "Newton's method", xlab = '')
+  optimum <- result[length(time )-1]
+  if (df2(optimum) > 0) {
+    print(paste("The optimum is a minimum and there are",length(time), "iteration and the optimum is", optimum))
+  } else {
+    print(paste("The optimum is a maximum and there are",length(time), "iteration and the optimum is", optimum))
+  }
+}
+
+x0 = 1
+Newton_method(x0)
+
+```
+
+The algorithm converges to zero.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\newpage
+\section{Exercise 2.}
+\subsubsection{Poisson model}
+
+In order to derive the log-likelihood function of a poisson model we should start from its pmf which is $P(Y =  y) =  \frac{\lambda^{y} e^{-\lambda}}{y!}$
+
+
+We can derive the likelihood function $L(\lambda| y_1,...,y_{240}) = \prod_{i=1}^{240} \frac{\lambda^{y_i} e^{-\lambda}}{y_i!}$
+
+
+The log-likelihood function of a poisson model is $$LL(\lambda| y_1,...,y_{240}) = ln(\lambda) \sum _{i=1}^{240}  y_i -240\lambda - \sum_{i=1}^{240}  ln(y_i!) $$
+
+Since the third term does not depend of $\lambda$ we can get rid of him and optimize for the first two terms.
+
+
+
+```{r, echo=FALSE}
+mouvements_nb = c(0,1,2,3,4,5,6,7)
+counts = c(182,41,12,2,2,0,0,1)
+X =  c(rep(0, 182), rep(1, 41), rep(2,12), rep(3, 2), rep(4,2), c(7))
+
+lambda_hat = t(mouvements_nb)%*%counts/240
+# 2.1
+LL1 = function(lambda, X) { log(lambda) * sum(X)-length(X) * lambda}
+res = optimize(f = LL1, X = X, lower = 0.001, upper = 99, maximum =TRUE)
+paste("optim gives us : max =",res$maximum,"| obj = ", res$objective)
+```
+Here we can see that the optimal value of $\lambda$ is 0.358.
+
+
+\subsubsection{Quasi-poisson model 1}
+
+
+
+The quasi-Poisson model's pmf is given as $$P(Y = y) =
+\left\{
+	\begin{array}{ll}
+		p + (1 - p) \frac{\lambda^{y} e^{-\lambda}}{y!}  & \mbox{if } y = 0 \\
+		(1-p)\frac{\lambda^{y} e^{-\lambda}}{y!} & \mbox{if } y \geq 1
+	\end{array}
+\right.$$
+
+
+
+
+
+
+
+
+
+
+The likelihood and log-likelihood functions are $$L(\lambda,p| y_1,...,y_{240}) =  (p + (1 - p) \frac{\lambda^{0} e^{-\lambda}}{0!})^{182}  \times 	((1-p)\frac{\lambda^{1} e^{-\lambda}}{1!})^{41} \times 	((1-p)\frac{\lambda^{2} e^{-\lambda}}{2!})^{12} \times 	((1-p)\frac{\lambda^{3} e^{-\lambda}}{3!})^2 $$ $$\times ((1-p)\frac{\lambda^{4} e^{-\lambda}}{4!})^2 \times	 (1-p)\frac{\lambda^{7} e^{-\lambda}}{7!}$$
+
+
+
+$$LL(\lambda,p| y_1,...,y_{240}) =    182ln((p + (1 - p) \frac{\lambda^{0} e^{-\lambda}}{0!})) + 41ln((1-p)\frac{\lambda^{1} e^{-\lambda}}{1!}) + 	12ln((1-p)\frac{\lambda^{2} e^{-\lambda}}{2!}) + 2	ln((1-p)\frac{\lambda^{3} e^{-\lambda}}{3!})$$ $$ + 	2ln((1-p)\frac{\lambda^{4} e^{-\lambda}}{4!}) + ln((1-p)\frac{\lambda^{7} e^{-\lambda}}{7!}) $$
+
+
+
+
+As in the last model, we can get rid of the terms wich does not depend on the parameters. (here -ln(yi!)
+
+```{r, include=TRUE, echo=FALSE}
+
+#2.2
+X2 =  c(rep(1, 41), rep(2,12), rep(3, 2), rep(4,2), c(7))
+
+LL2 = function(para){
+  lambda = para[1]
+  p = para[2]
+  return(length(X2) * log(1-p) + sum(X2*log(lambda)) - lambda * length(X2)+ 
+          182* log(p + (1-p) * exp(-lambda)))}
+
+BFGS = optim(par =c(0.5,0.5), fn = LL2, method = "BFGS",control =list(fnscale =-1))
+BFGS_res = c(BFGS$par,BFGS$value, BFGS$counts, BFGS$convergence)
+BFGS_res = data.frame(matrix(BFGS_res, nrow = 1))
+colnames(BFGS_res) = c('lambda', 'p', 'value', 'iteration','gradient','convergence')
+BFGS_res
+
+CG = optim(par =c(0.5,0.5), fn = LL2, method = "CG", control =list(fnscale =-1))
+CG_res = c(CG$par,CG$value, CG$counts, CG$convergence)
+CG_res = data.frame(matrix(CG_res, nrow = 1))
+colnames(CG_res) = c('lambda', 'p', 'value', 'iteration','gradient','convergence')
+CG_res
+```
+The optimal values for $\lambda$ and $p$ are 0.85 and 0.58.
+
+
+\subsubsection{Quasi-poisson model 2}
+
+
+The quasi-Poisson model's pmf is given as $$ P(Y = y) =
+\left\{
+	\begin{array}{ll}
+		p & \mbox{if } y = 0 \\
+		(1-p)\frac{\lambda^{y} e^{-\lambda}}{y!(1-e^{-\lambda})} & \mbox{if } y \geq 1
+	\end{array}
+\right.$$
+
+The likelihood and log-likelihood functions are $$L(\lambda,p| y_1,...,y_{240}) =  p^{182}  \times 	((1-p)\frac{\lambda^{1} e^{-\lambda}}{(1-e^{-\lambda})1!})^{41} \times 	((1-p)\frac{\lambda^{2} e^{-\lambda}}{(1-e^{-\lambda})2!})^{12} \times 	((1-p)\frac{\lambda^{3} e^{-\lambda}}{(1-e^{-\lambda})3!})^2 \times ((1-p)\frac{\lambda^{4} e^{-\lambda}}{(1-e^{-\lambda})4!})^2 $$ $$\times	 (1-p)\frac{\lambda^{7} e^{-\lambda}}{(1-e^{-\lambda})7!}$$
+
+
+
+$$LL(\lambda,p| y_1,...,y_{240}) =  	182ln(p) + 41ln((1-p)\frac{\lambda^{1} e^{-\lambda}}{1!(1-e^{-\lambda})}) + 	12ln((1-p)\frac{\lambda^{2} e^{-\lambda}}{2!(1-e^{-\lambda})}) + 	2ln((1-p)\frac{\lambda^{3} e^{-\lambda}}{3!(1-e^{-\lambda})})$$ $$ + 	2ln((1-p)\frac{\lambda^{4} e^{-\lambda}}{4!(1-e^{-\lambda})})+ ln((1-p)\frac{\lambda^{7} e^{-\lambda}}{7!(1-e^{-\lambda})})$$
+
+```{r, include=TRUE, echo=FALSE}
+#2.3
+
+LL3 = function(para){
+  lambda = para[1]
+  p = para[2]
+
+  return( length(X2) * log(1-p) + sum(X2 * log(lambda)) - lambda  * length(X2)
+          - length(X2)* log(1- exp(-lambda)) + 182 * log(p)  )
+  }
+
+
+BFGS = optim(par = c(0.5,0.5), fn = LL3, method = "BFGS",control =list(fnscale =-1))
+BFGS_res = c(BFGS$par,BFGS$value, BFGS$counts, BFGS$convergence)
+BFGS_res = data.frame(matrix(BFGS_res, nrow = 1))
+colnames(BFGS_res) = c('lambda', 'p', 'value', 'iteration','gradient','convergence')
+BFGS_res
+
+CG = optim(par = c(0.5,0.5), fn = LL3, method = "CG",control =list(fnscale =-1))
+CG_res = c(CG$par,CG$value, CG$counts, CG$convergence)
+CG_res = data.frame(matrix(CG_res, nrow = 1))
+colnames(CG_res) = c('lamda', 'p', 'value', 'iteration','gradient','convergence')
+CG_res
+```
+The optimal values for $\lambda$ and $p$ are 0.85 and 0.76.
+
+
+
+
+
+
+In the first quasi-Poisson model, p is the probability of observing a count of 0, and in the second quasi-Poisson model, p is the probability of observing any count less than 1. These two definitions of p are different, and so it is not surprising that the estimates for p in the two models are different.
+
+Intuitively, the difference in the definitions of p could lead to different estimates, because the probability of observing a count of 0 in the first model depends on both p and the intensity parameter $\lambda$, while in the second model, it only depends on p. This could lead to different estimates for p in the two models, even if the estimates for $\lambda$ are similar.
+
+
+\newpage
+\section{Exercise 3.}
+\subsection{Question 1.}
+One possible estimator for the coefficient of variation of X, denoted as $\theta$, is the sample coefficient of variation. The sample coefficient of variation is defined as the ratio of the sample standard deviation to the sample mean, and is calculated as follows:
+ $\hat{\theta} = S / \bar{X} = \frac{\sqrt{\sum_{i} (X_i - \bar{X})^2 }n }{\sqrt{(n-1)}\sum_{i} X_i}$
+ 
+ Therefore, to estimate $\theta$ using the method of moments, we can calculate the sample mean and sample standard deviation of the sample X1, ..., Xn, and then use these estimates to calculate the sample coefficient of variation $\hat{\theta}$.
+
+
+
+\subsection{Question 2.}
+Firstly we can estimate the bias and the variance of our estimator via $$Bias^*(T) = Bias_{F_n}(T) = E_{F_n}T^2(X^*) - \theta(F_n)$$ and $$ Var^*(T) = Var_{F_n}(T) =E_{F_n}T^2(X^*) - (E_{F_n}T(X^*))^2$$
+
+
+
+```{r, echo=FALSE}
+set.seed(1234)
+a = 9
+c = 1
+n = 30
+X = rgamma(n = n, shape = a, scale = c)
+
+
+
+
+theta_hat = ((n-1)/n*sd(X))/mean(X)
+
+
+
+theta_boot = c()
+sigmastar = c()
+
+for (i in 1:1000){
+set.seed(1234*i)
+samp = sample(x = as.matrix(X), size = n, replace = TRUE)
+theta_boot = append(theta_boot, ((n-1)/n*sd(samp)/mean(samp)))
+sigmastar = append(sigmastar, sd(samp)) 
+}
+
+Bias= mean(theta_boot) -theta_hat
+variance = var(theta_boot)
+
+print(paste("Bias:", round(Bias,3)))
+print(paste("Variance:", round(variance,3)))
+
+```
+We can give a confidence interval for $\theta$ using a traditional asymptotic method, the basic bootstrap method, the percentile bootstrap method and the t-bootstrap method.
+
+
+$$\theta \in \left[\hat{\theta} - z_{1-\frac{\alpha}{2}}\hat{\sigma}, \hat{\theta} - z_{ \frac{\alpha}{2}}\hat{\sigma}\right]$$
+
+```{r, echo=FALSE}
+born_inf_norm = theta_hat - qnorm(p = 0.975)* theta_hat/sqrt(n)
+born_sup_norm =theta_hat + qnorm(p = 0.975)*theta_hat/sqrt(n)
+print(paste("Confidence interval for the assymptotic method:", 
+            c(round(born_inf_norm,3)),round(born_sup_norm,3)))
+
+```
+
+
+$$\theta \in \left[\hat{\theta} - u^*(1-\frac{\alpha}{2}), \hat{\theta} - u^*( \frac{\alpha}{2})\right]$$
+```{r, echo=FALSE}
+born_inf_basic = theta_hat - quantile(theta_boot-theta_hat, probs = 0.975)
+born_sup_basic = theta_hat - quantile(theta_boot-theta_hat, probs = 0.025)
+print(paste("Confidence interval for the basic bootstrap method:", 
+            c(round(born_inf_basic,3)),round(born_sup_basic,3)))
+```
+$$\theta \in \left[\hat{\theta} + u^*(\frac{\alpha}{2}), \hat{\theta} + u^*(1 - \frac{\alpha}{2})\right]$$
+
+```{r, echo=FALSE}
+born_inf_perc = theta_hat  + quantile(theta_boot-theta_hat, probs = 0.025)
+born_sup_perc = theta_hat  + quantile(theta_boot-theta_hat, probs = 0.975)
+print(paste("Confidence interval for the percentile bootstrap method:", 
+            c(round(born_inf_perc,3)),round(born_sup_perc,3)))
+```
+$$\theta \in \left[ \hat{\theta - n^{-1/2}s \hat{y}_{1-\alpha/2} }, \hat{\theta}- n^{-1/2}s{\hat{y}_{\alpha/2}} \right]$$
+where $\hat{y}(a)$ is the a-quantile of $\hat{K}(x)$ the empirical bootstrap distribution of $U^* = \sqrt{n}(\frac{(\hat{\theta}^* - \hat{\theta})}{S^*})$
+
+
+```{r, echo=FALSE}
+U = sqrt(n) * (theta_boot-theta_hat)/sigmastar
+born_inf_t = theta_hat-sd(X) *quantile(U, probs = 0.975)/sqrt(n)
+born_sup_t = theta_hat-sd(X) *quantile(U, probs = 0.025)/sqrt(n)
+print(paste("Confidence interval for the t-bootstrap method:", 
+            c(round(born_inf_t,3)),round(born_sup_t,3)))
+```
+
+
+We will aslo use an iterated bootstrap procedure for the t-bootstrap method.
+```{r, echo=FALSE}
+
+T <- function(X) {
+  return(sd(X) / mean(X))
+}
+
+bootstrap <- function(X) {
+  return(sample(X, replace = TRUE))
+}
+
+
+
+B1 <- 2000
+T_star <- numeric(B1)
+
+
+for (b1 in 1:B1) {
+  set.seed(1234*b1)
+
+
+  X_star <- bootstrap(X)
+  
+
+  T_star[b1] <- T(X_star)
+}
+
+B2 <- 200
+
+
+var_star_star <- numeric(B1)
+
+
+for (b1 in 1:B1) {
+
+  T_star_star <- numeric(B2)
+  
+
+  for (b2 in 1:B2) {
+  set.seed(1234*b1*b2)
+    X_star_star <- bootstrap(X_star[b1])
+    
+    
+    T_star_star[b2] <- T(X_star_star)
+  }
+  
+ 
+  var_star_star[b1] <- var(T_star_star)
+}
+
+sigma_star <- sqrt(n * var(T_star) / B1)
+
+
+
+W_star <- sqrt(n) * (T_star - T(X)) / sigma_star 
+
+
+
+lower <- T(X) - quantile(W_star, p = 1 - 0.05 / 2, na.rm = TRUE) * sigma_star / sqrt(n)
+upper <- T(X) - quantile(W_star, p = 0.05 / 2, na.rm = TRUE) * sigma_star / sqrt(n)
+
+
+print(paste("Confidence interval for the iterated t-bootstrap method:", 
+            c(round(lower,3)),round(upper,3)))
+```
+
+Here is a plot of all the confidence interval :
+
+```{r, echo =  FALSE}
+plot(density(theta_boot), main = "Bootstrap estimates and confidence intervals",
+     xlab = "Theta", ylab = "Density", lwd = 2)
+abline(v = theta_hat, lty = 2, col = "red", lw = 2)
+abline(v = c(born_inf_norm, born_sup_norm), lty = 3, col = "blue", lw = 2)
+abline(v = c(born_inf_basic, born_sup_basic), lty = 3, col = "green", lw = 2)
+abline(v = c(born_inf_perc, born_sup_perc), lty = 3, col = "purple", lw = 2)
+abline(v = c(born_inf_t, born_sup_t), lty = 3, col = "orange", lw = 2)
+abline(v = c(lower, upper), lty = 3, col = 'yellow', lw = 2)
+legend("topleft", c("theta_hat","Asymptotic", "Basic bootstrap", "Percentile bootstrap", "t-bootstrap"),
+       lty = c(3, 3, 3, 3, 3, 3),lw = c(2,2,2,2,2,2), col = c("red", "blue", "green", "purple", "orange", "yellow"), cex = 0.4)
+```
+
+
+\subsection{Question 3.}
+
+We can perform a hypothesis test based on a bootstrap procedure for the parameter of interest, $\theta$.
+
+The first test is : $$\begin{cases} H_0 : \theta \ge 1/3 \\ H_1 : \theta < 1/3 \end{cases}$$
+
+```{r, echo=FALSE}
+set.seed(1234)
+a= 9
+c=1
+n = 30
+X = rgamma(n = n, shape = a, scale = c)
+
+null_hypothesis <- 1/3
+alternative_hypothesis <- "!="
+
+
+theta_hat <- ((n - 1) / n * sd(X)) / mean(X)
+Xtilde = X-mean(X)+3*sd(X)
+
+B <- 1000
+bootstrap_samples <- lapply(1:B, function(i) sample(x = Xtilde, size = n, replace = TRUE))
+
+
+
+theta_estimators <- lapply(bootstrap_samples, function(bootstrap_sample) {
+  mean_bootstrap_sample <- mean(bootstrap_sample)
+  var_bootstrap_sample <- var(bootstrap_sample)
+  theta_estimator <- sqrt(var_bootstrap_sample) / mean_bootstrap_sample
+  return(theta_estimator)})
+
+
+
+
+
+
+
+
+
+p_value = 0
+for(i in 1:length(bootstrap_samples)){
+if (theta_estimators[i]<theta_hat){p_value  = p_value+1}}
+p_value = (p_value +1)/(B+1)
+print(paste("p-value :",p_value))
+
+  if (p_value < 0.05) {
+    print("Reject null hypothesis")
+  } else {
+    print("Fail to reject null hypothesis")}
+
+
+```
+The second test is : $$\begin{cases} H_0 : \theta \ge 0.75 \\ H_1 : \theta < 0.75 \end{cases}$$
+
+```{r, echo=FALSE}
+set.seed(1234)
+a= 9
+c=1
+n = 30
+X = rgamma(n = n, shape = a, scale = c)
+
+null_hypothesis <- 0.75
+alternative_hypothesis <- "<="
+
+
+theta_hat <- ((n - 1) / n * sd(X)) / mean(X)
+Xtilde = X-mean(X)+4*sd(X)/3
+
+B <- 1000
+bootstrap_samples <- lapply(1:B, function(i) sample(x = Xtilde, size = n, replace = TRUE))
+
+
+
+theta_estimators <- lapply(bootstrap_samples, function(bootstrap_sample) {
+  mean_bootstrap_sample <- mean(bootstrap_sample)
+  var_bootstrap_sample <- var(bootstrap_sample)
+  theta_estimator <- sqrt(var_bootstrap_sample) / mean_bootstrap_sample
+  return(theta_estimator)})
+
+         
+         
+         
+         
+
+
+
+p_value = 0
+for(i in 1:length(theta_estimators)){
+if (theta_estimators[i]<theta_hat){p_value  = p_value+1}}
+p_value = (p_value +1)/(B+1)
+
+print(paste("p-value :",p_value))
+
+
+  if (p_value < 0.05) {
+    print("Reject null hypothesis")
+  } else {
+    print("Fail to reject null hypothesis")}
+
+
+
+
+```
+
+
+
+
+
+\subsection{Question 4.}
+In order to evaluate the performance of different methods for obtaining confidence intervals, we conducted a Monte Carlo study using samples of size n drawn B times, where $n \in \{10, 50, 100, 500\}$. We used the coverage probability and the width of the interval as measures of evaluation.
+```{r, echo=FALSE}
+set.seed(1234)
+resulttot = matrix(nrow = 4, ncol = 2,dimnames = list(c( "As.Normal", "Basic Boot.", "Perc.Boot.", "t-Boot."), c("length", "coverage") ))
+M = 1000
+a= 9
+c=1
+n = 30
+
+for (n in c(10,50,100,500)){
+count_t = 0
+count_norm = 0
+count_basic = 0
+count_perc = 0
+count_t_length = 0
+count_norm_length = 0
+count_basic_length = 0
+count_perc_length = 0
+for(j in 1:M){
+set.seed(1234*i*j)
+
+X =  rgamma(n = n, shape = a, scale = c)
+result = matrix(nrow = 4, ncol = 2,dimnames = list(c( "As.Normal", "Basic Boot.", "Perc.Boot.", "t-Boot."), c("length", "coverage") ))
+
+
+teta_hat = ((n-1)/n*sd(X))/mean(X)
+
+
+born_inf_norm = teta_hat -qnorm(p = 0.975)*teta_hat/sqrt(n)
+born_sup_norm =teta_hat+qnorm(p = 0.975)*teta_hat/sqrt(n)
+born_inf_norm
+born_sup_norm
+
+
+if (1/3>born_inf_norm && 1/3< born_sup_norm){count_norm = count_norm + 1}
+
+
+length_norm = born_sup_norm - born_inf_norm
+
+
+count_norm_length = count_norm_length + length_norm
+result[1,1] = count_norm_length/M
+
+
+
+X_boot = c()
+sigmastar = c()
+
+for (i in 1:1000){
+samp = sample(x = as.matrix(X), size = n, replace = TRUE)
+X_boot = append(X_boot, ((n-1)/n*sd(samp)/mean(samp)))
+sigmastar = append(sigmastar, sd(samp)) 
+}
+
+
+
+born_inf_basic=2*teta_hat - quantile(X_boot, probs = 0.975)
+born_sup_basic =2*teta_hat - quantile(X_boot, probs = 0.025)
+born_inf_basic
+born_sup_basic
+
+if (1/3>born_inf_basic && 1/3< born_sup_basic){count_basic = count_basic + 1}
+
+
+length_basic = born_sup_basic - born_inf_basic
+count_basic_length = count_basic_length + length_basic
+result[2,1] = count_basic_length/M
+
+
+born_inf_perc=  quantile(X_boot, probs = 0.025)
+born_sup_perc =  quantile(X_boot, probs = 0.975)
+born_inf_perc
+born_sup_perc
+
+if (1/3>born_inf_perc && 1/3< born_sup_perc){count_perc = count_perc + 1}
+
+
+length_perc = born_sup_perc - born_inf_perc
+count_perc_length = count_perc_length + length_basic
+result[3,1] = count_perc_length/M
+
+
+S = sqrt(n) * (X_boot-teta_hat)/sigmastar
+
+
+born_inf_t = teta_hat-sd(X) *quantile(S, probs = 0.975)/sqrt(n)
+born_sup_t = teta_hat-sd(X) *quantile(S, probs = 0.025)/sqrt(n)
+born_inf_t
+born_sup_t
+
+
+if (1/3>born_inf_t && 1/3< born_sup_t){count_t = count_t + 1}
+
+length_t = born_sup_t - born_inf_t
+count_t_length = count_t_length + length_t
+result[4,1] = count_t_length/M
+
+
+}
+
+
+result[1,2] = count_norm/M
+result[2,2] = count_basic/M
+result[3,2] = count_perc/M
+result[4,2] = count_t/M
+resulttot = cbind(resulttot, result)
+}
+print('              n = 3               n = 10            n = 20              n = 30                 ')
+resulttot[,c(3:10)]
+
+```
+
+
+\newpage
+\section{Appendix.}
+
+
+$$f(x) = \frac{exp(x)}{ 1 + exp(x)}$$
+$$f'(x) = (\frac{e^x} { (1 + e^x)})' = \frac{(e^x)'(1+e^x) - e^x(1+e^x)'}{(1+e^x)^2} = \frac {e^x(1+e^x)-e^{2x}}{(1+e^x)^2} = \frac{ e^x +e^{2x} - e^{2x}}{(1+e^x)^2} = \frac{e^x}{(1+e^x)^2}$$
+$$ f''(x) = (\frac{e^x}{(1+e^x)^2})' = \frac{(e^x)'(1+e^x)^2 - e^x ((1+e^x)^2)'}{(1+e^x)^4} = \frac{e^x(1+e^x)^2 - e^x 2(1+e^x)e^x}{(1+e^x)^4}  $$
+$$=\frac{e^x(1+e^x) - e^x 2e^x}{(1+e^x)^3}= \frac{e^x+e^{2x} -  2e^{2x}}{(1+e^x)^3}= \frac{e^x-e^{2x}}{(1+e^x)^3}= \frac{e^x(1-e^x)}{(1+e^x)^3}$$
+
+$$ f''(x) =  (\frac{e^x(1-e^x)}{(1+e^x)^3})' = \frac{(e^x(1-e^x))'(1+e^x)^3 - e^x(1-e^x)((1+e^x)^3)'}{(1+e^x)^6} = \frac{(e^x - 2e^{2x})(1+e^x)^3 - e^x(1-e^x)3(1+e^x)^2e^x}{(1+e^x)^6}$$ $$=\frac{(e^x - 2e^{2x})(1+e^x) - e^x(1-e^x)3e^x}{(1+e^x)^4}=\frac{e^x-2e^{2x}+ e^{2x}-2e^{3x}-3e^{2x}+3e^{3x}}{(1+e^x)^4}$$ $$=\frac{e^{3x} - 4e^{2x} +e^x}{(1+e^x)^4}=\frac{e^x(e^{2x}-4e^x+1)}{(1+e^x)^4} $$
+
+
+```{r, echo=T, eval = F}
+f = function(x){
+  return(exp(x) / (1 + exp(x)))
+}
+
+df1 = function(x){
+  return(exp(x)/(1 + exp(x))^2 )
+}
+
+df2 = function(x){
+  return(-(exp(x)*(exp(x) - 1))/(1 + exp(x))^3)
+}
+
+
+df3 = function(x){
+  return((exp(x)*(-4*exp(x) + exp(2*x) + 1))/(exp(x) + 1)^4)
+}
+
+taylor_exp = function(x){
+  return((0.5) * 1 + (0.25) * x + (-1/48) * x^3)
+}
+
+
+```
+
+```{r, echo=T,eval = F, fig.height = 5, fig.width = 25/3}
+t = seq(-5,5,0.01)
+plot(t,taylor_exp(t), type = 'l', col = 'red', lwd = 2, main = 'Taylor Expansion', ylab = '')
+lines(t, f(t), col = 'black', lwd = 2 )
+legend("topright", col = c('red', 'black'), lty = c(1,1), lwd = c(2,2),
+       cex = 0.5, legend = c("Taylor expansion in 0","Function F(x)"))
+
+
+```
+
+```{r, echo=T, eval =F, fig.height = 5, fig.width = 25/3}
+Newton_method = function(x){
+  j = 0
+  i0 = x
+  i = 0
+  result = c(i0)
+  time = c(0)
+  while(j != 1){
+    i = i + 1
+    i1 = i0 - df2(i0)/df3(i0)*0.1
+    result = c(result,i1)
+    time = c(time,i)
+    if(i1 == i0){
+      j = 1
+    }
+    else {
+      j = 0
+      i0 = i1
+    }
+  }
+  data.frame(time,result)
+  plot(time, result, type = 'l', ylim = c(-0.2,1),
+       col = 'red', lwd = 2, main = "Newton's method", xlab = '')
+  optimum <- result[length(time )-1]
+  if (df2(optimum) > 0) {
+    print(paste("The optimum is a minimum and there are",length(time), "iteration and the optimum is", optimum))
+  } else {
+    print(paste("The optimum is a maximum and there are",length(time), "iteration and the optimum is", optimum))
+  }
+}
+
+x0 = 1
+Newton_method(x0)
+
+```
+
+```{r, echo=T, eval = F}
+mouvements_nb = c(0,1,2,3,4,5,6,7)
+counts = c(182,41,12,2,2,0,0,1)
+X =  c(rep(0, 182), rep(1, 41), rep(2,12), rep(3, 2), rep(4,2), c(7))
+
+lambda_hat = t(mouvements_nb)%*%counts/240
+print(paste("lambda_hat =",lambda_hat))
+# 2.1
+LL1 = function(lambda, X) { log(lambda) * sum(X)-length(X) * lambda}
+res = optimize(f = LL1, X = X, lower = 0.001, upper = 99, maximum =TRUE)
+paste("optim gives us : max =",res$maximum,"| obj = ", res$objective)
+```
+
+```{r, include=TRUE, echo=T, eval = F}
+
+#2.2
+X2 =  c(rep(1, 41), rep(2,12), rep(3, 2), rep(4,2), c(7))
+
+LL2 = function(para){
+  lambda = para[1]
+  p = para[2]
+  return(length(X2) * log(1-p) + sum(X2*log(lambda)) - lambda * length(X2)+ 
+           182* log(p + (1-p) * exp(-lambda)))}
+
+BFGS = optim(par =c(0.5,0.5), fn = LL2, method = "BFGS",control =list(fnscale =-1))
+BFGS_res = c(BFGS$par,BFGS$value, BFGS$counts, BFGS$convergence)
+BFGS_res = data.frame(matrix(BFGS_res, nrow = 1))
+colnames(BFGS_res) = c('lambda', 'p', 'value', 'iteration','gradient','convergence')
+BFGS_res
+
+CG = optim(par =c(0.5,0.5), fn = LL2, method = "CG", control =list(fnscale =-1))
+CG_res = c(CG$par,CG$value, CG$counts, CG$convergence)
+CG_res = data.frame(matrix(CG_res, nrow = 1))
+colnames(CG_res) = c('lambda', 'p', 'value', 'iteration','gradient','convergence')
+CG_res
+```
+
+```{r, include=TRUE, echo=T, eval =F}
+#2.3
+
+LL3 = function(para){
+  lambda = para[1]
+  p = para[2]
+  
+  return( length(X2) * log(1-p) + sum(X2 * log(lambda)) - lambda  * length(X2)
+          - length(X2)* log(1- exp(-lambda)) + 182 * log(p)  )
+}
+
+
+BFGS = optim(par = c(0.5,0.5), fn = LL3, method = "BFGS",control =list(fnscale =-1))
+BFGS_res = c(BFGS$par,BFGS$value, BFGS$counts, BFGS$convergence)
+BFGS_res = data.frame(matrix(BFGS_res, nrow = 1))
+colnames(BFGS_res) = c('lambda', 'p', 'value', 'iteration','gradient','convergence')
+BFGS_res
+
+CG = optim(par = c(0.5,0.5), fn = LL3, method = "CG",control =list(fnscale =-1))
+CG_res = c(CG$par,CG$value, CG$counts, CG$convergence)
+CG_res = data.frame(matrix(CG_res, nrow = 1))
+colnames(CG_res) = c('lamda', 'p', 'value', 'iteration','gradient','convergence')
+CG_res
+```
+
+```{r, echo= T, eval =F}
+a = 9
+c = 1
+n = 30
+X = rgamma(n = n, shape = a, scale = c)
+
+
+
+
+theta_hat = ((n-1)/n*sd(X))/mean(X)
+
+
+
+theta_boot = c()
+sigmastar = c()
+
+for (i in 1:1000){
+  samp = sample(x = as.matrix(X), size = n, replace = TRUE)
+  theta_boot = append(theta_boot, ((n-1)/n*sd(samp)/mean(samp)))
+  sigmastar = append(sigmastar, sd(samp)) 
+}
+
+Bias= mean(theta_boot) -theta_hat
+variance = var(theta_boot)
+
+print(paste("Bias:", round(Bias,3)))
+print(paste("Variance:", round(variance,3)))
+
+```
+```{r, echo=T, eval = F}
+born_inf_norm = theta_hat - qnorm(p = 0.975)* theta_hat/sqrt(n)
+born_sup_norm =theta_hat + qnorm(p = 0.975)*theta_hat/sqrt(n)
+print(paste("Confidence interval for the assymptotic method:", 
+            c(round(born_inf_norm,3)),round(born_sup_norm,3)))
+```
+```{r, echo=T, eval = F}
+born_inf_basic = theta_hat - quantile(theta_boot-theta_hat, probs = 0.975)
+born_sup_basic = theta_hat - quantile(theta_boot-theta_hat, probs = 0.025)
+print(paste("Confidence interval for the basic bootstrap method:", 
+            c(round(born_inf_basic,3)),round(born_sup_basic,3)))
+```
+
+```{r, echo=T ,eval = F}
+born_inf_perc = theta_hat  + quantile(theta_boot-theta_hat, probs = 0.025)
+born_sup_perc = theta_hat  + quantile(theta_boot-theta_hat, probs = 0.975)
+print(paste("Confidence interval for the percentile bootstrap method:", 
+            c(round(born_inf_perc,3)),round(born_sup_perc,3)))
+```
+
+```{r, echo=T , eval =  F}
+U = sqrt(n) * (theta_boot-theta_hat)/sigmastar
+born_inf_t = theta_hat-sd(X) *quantile(U, probs = 0.975)/sqrt(n)
+born_sup_t = theta_hat-sd(X) *quantile(U, probs = 0.025)/sqrt(n)
+print(paste("Confidence interval for the t-bootstrap method:", 
+            c(round(born_inf_t,3)),round(born_sup_t,3)))
+```
+
+```{r, echo=T, eval = F}
+
+T <- function(X) {
+  return(sd(X) / mean(X))
+}
+
+
+bootstrap <- function(X) {
+  return(sample(X, replace = TRUE))
+}
+
+
+
+
+B1 <- 2000
+
+T_star <- numeric(B1)
+
+
+for (b1 in 1:B1) {
+
+  X_star <- bootstrap(X)
+  
+
+  T_star[b1] <- T(X_star)
+}
+
+
+B2 <- 200
+
+
+var_star_star <- numeric(B1)
+
+for (b1 in 1:B1) {
+  
+  T_star_star <- numeric(B2)
+  
+  for (b2 in 1:B2) {
+
+    X_star_star <- bootstrap(X_star[b1])
+    
+
+    T_star_star[b2] <- T(X_star_star)
+  }
+  
+  var_star_star[b1] <- var(T_star_star)
+}
+
+sigma_star <- sqrt(n * var(T_star) / B1)
+
+
+
+W_star <- sqrt(n) * (T_star - T(X)) / sigma_star 
+
+
+
+
+lower <- T(X) - quantile(W_star, p = 1 - 0.05 / 2, na.rm = TRUE) * sigma_star / sqrt(n)
+upper <- T(X) - quantile(W_star, p = 0.05 / 2, na.rm = TRUE) * sigma_star / sqrt(n)
+print(paste("Confidence interval for the iterated t-bootstrap method:", 
+            c(round(lower,3)),round(upper,3)))
+```
+
+```{r, echo =  T, eval = F}
+plot(density(theta_boot), main = "Bootstrap estimates and confidence intervals",
+     xlab = "Theta", ylab = "Density", lwd = 2)
+abline(v = theta_hat, lty = 2, col = "red", lw = 2)
+abline(v = c(born_inf_norm, born_sup_norm), lty = 3, col = "blue", lw = 2)
+abline(v = c(born_inf_basic, born_sup_basic), lty = 3, col = "green", lw = 2)
+abline(v = c(born_inf_perc, born_sup_perc), lty = 3, col = "purple", lw = 2)
+abline(v = c(born_inf_t, born_sup_t), lty = 3, col = "orange", lw = 2)
+abline(v = c(lower, upper), lty = 3, col = 'yellow', lw = 2)
+legend("topleft", c("theta_hat","Asymptotic", "Basic bootstrap", "Percentile bootstrap", "t-bootstrap"),
+       lty = c(3, 3, 3, 3, 3, 3),lw = c(2,2,2,2,2,2), col = c("red", "blue", "green", "purple", "orange", "yellow"), cex = 0.4)
+```
+
+```{r, echo=T, eval = F}
+set.seed(1234)
+a= 9
+c=1
+n = 30
+X = rgamma(n = n, shape = a, scale = c)
+
+null_hypothesis <- 1/3
+alternative_hypothesis <- "!="
+
+
+theta_hat <- ((n - 1) / n * sd(X)) / mean(X)
+Xtilde = X-mean(X)+3*sd(X)
+
+B <- 1000
+bootstrap_samples <- lapply(1:B, function(i) sample(x = Xtilde, size = n, replace = TRUE))
+
+
+
+theta_estimators <- lapply(bootstrap_samples, function(bootstrap_sample) {
+  mean_bootstrap_sample <- mean(bootstrap_sample)
+  var_bootstrap_sample <- var(bootstrap_sample)
+  theta_estimator <- sqrt(var_bootstrap_sample) / mean_bootstrap_sample
+  return(theta_estimator)})
+
+
+
+p_value = 0
+for(i in 1:length(bootstrap_samples)){
+  if (theta_estimators[i]<theta_hat){p_value  = p_value+1}}
+p_value = (p_value +1)/(B+1)
+print(paste("p-value :",p_value))
+
+if (p_value < 0.05) {
+  print("Reject null hypothesis")
+} else {
+  print("Fail to reject null hypothesis")}
+
+
+```
+
+```{r, echo=T, eval = F}
+set.seed(1234)
+a= 9
+c=1
+n = 30
+X = rgamma(n = n, shape = a, scale = c)
+
+null_hypothesis <- 0.75
+alternative_hypothesis <- "<="
+
+
+theta_hat <- ((n - 1) / n * sd(X)) / mean(X)
+Xtilde = X-mean(X)+4*sd(X)/3
+
+B <- 1000
+bootstrap_samples <- lapply(1:B, function(i) sample(x = Xtilde, size = n, replace = TRUE))
+
+
+
+theta_estimators <- lapply(bootstrap_samples, function(bootstrap_sample) {
+  mean_bootstrap_sample <- mean(bootstrap_sample)
+  var_bootstrap_sample <- var(bootstrap_sample)
+  theta_estimator <- sqrt(var_bootstrap_sample) / mean_bootstrap_sample
+  return(theta_estimator)})
+
+p_value = 0
+for(i in 1:length(theta_estimators)){
+  if (theta_estimators[i]<theta_hat){p_value  = p_value+1}}
+p_value = (p_value +1)/(B+1)
+
+print(paste("p-value :",p_value))
+
+
+if (p_value < 0.05) {
+  print("Reject null hypothesis")
+} else {
+  print("Fail to reject null hypothesis")}
+
+
+
+
+```
+
+```{r, echo=T, eval = F}
+resulttot = matrix(nrow = 4, ncol = 2,dimnames = list(c( "As.Normal", "Basic Boot.", "Perc.Boot.", "t-Boot."), c("length", "coverage") ))
+M = 1000
+a= 9
+c=1
+n = 30
+
+for (n in c(10,50,100,500)){
+  count_t = 0
+  count_norm = 0
+  count_basic = 0
+  count_perc = 0
+  count_t_length = 0
+  count_norm_length = 0
+  count_basic_length = 0
+  count_perc_length = 0
+  for(j in 1:M){
+    
+    
+    X =  rgamma(n = n, shape = a, scale = c)
+    result = matrix(nrow = 4, ncol = 2,dimnames = list(c( "As.Normal", "Basic Boot.", "Perc.Boot.", "t-Boot."), c("length", "coverage") ))
+    
+    
+    teta_hat = ((n-1)/n*sd(X))/mean(X)
+    
+    
+    born_inf_norm = teta_hat -qnorm(p = 0.975)*teta_hat/sqrt(n)
+    born_sup_norm =teta_hat+qnorm(p = 0.975)*teta_hat/sqrt(n)
+    born_inf_norm
+    born_sup_norm
+    
+    
+    if (1/3>born_inf_norm && 1/3< born_sup_norm){count_norm = count_norm + 1}
+    
+    
+    length_norm = born_sup_norm - born_inf_norm
+    
+    
+    count_norm_length = count_norm_length + length_norm
+    result[1,1] = count_norm_length/M
+    
+    
+    
+    X_boot = c()
+    sigmastar = c()
+    
+    for (i in 1:1000){
+      samp = sample(x = as.matrix(X), size = n, replace = TRUE)
+      X_boot = append(X_boot, ((n-1)/n*sd(samp)/mean(samp)))
+      sigmastar = append(sigmastar, sd(samp)) 
+    }
+    
+    
+    
+    born_inf_basic=2*teta_hat - quantile(X_boot, probs = 0.975)
+    born_sup_basic =2*teta_hat - quantile(X_boot, probs = 0.025)
+    born_inf_basic
+    born_sup_basic
+    
+    if (1/3>born_inf_basic && 1/3< born_sup_basic){count_basic = count_basic + 1}
+    
+    
+    length_basic = born_sup_basic - born_inf_basic
+    count_basic_length = count_basic_length + length_basic
+    result[2,1] = count_basic_length/M
+    
+    
+    born_inf_perc=  quantile(X_boot, probs = 0.025)
+    born_sup_perc =  quantile(X_boot, probs = 0.975)
+    born_inf_perc
+    born_sup_perc
+    
+    if (1/3>born_inf_perc && 1/3< born_sup_perc){count_perc = count_perc + 1}
+    
+    
+    length_perc = born_sup_perc - born_inf_perc
+    count_perc_length = count_perc_length + length_basic
+    result[3,1] = count_perc_length/M
+    
+    
+    S = sqrt(n) * (X_boot-teta_hat)/sigmastar
+    
+    
+    born_inf_t = teta_hat-sd(X) *quantile(S, probs = 0.975)/sqrt(n)
+    born_sup_t = teta_hat-sd(X) *quantile(S, probs = 0.025)/sqrt(n)
+    born_inf_t
+    born_sup_t
+    
+    
+    if (1/3>born_inf_t && 1/3< born_sup_t){count_t = count_t + 1}
+    
+    length_t = born_sup_t - born_inf_t
+    count_t_length = count_t_length + length_t
+    result[4,1] = count_t_length/M
+    
+    
+  }
+  
+  
+  result[1,2] = count_norm/M
+  result[2,2] = count_basic/M
+  result[3,2] = count_perc/M
+  result[4,2] = count_t/M
+  resulttot = cbind(resulttot, result)
+}
+print('              n = 3               n = 10            n = 20              n = 30                 ')
+resulttot[,c(3:10)]
+
+```
+
+
+
+
+
+
+
+
+
+
